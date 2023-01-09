@@ -22,15 +22,19 @@ import sys
 import socket
 import re
 # you may use urllib to encode data appropriately
-import urllib.parse
+from urllib.parse import urlparse, ParseResult, urlencode
 
 def help():
-    print("httpclient.py [GET/POST] [URL]\n")
+    print("httpclient.py [GET/POST] [URL]\r\n")
 
 class HTTPResponse(object):
     def __init__(self, code=200, body=""):
-        self.code = code
+        self.code = int(code)
         self.body = body
+
+    def __str__(self):
+
+        return "RESPONSE HTTP CODE: " + str(self.code) + "\r\n\r\n" + self.body
 
 class HTTPClient(object):
     #def get_host_port(self,url):
@@ -65,11 +69,34 @@ class HTTPClient(object):
                 buffer.extend(part)
             else:
                 done = not part
-        return buffer.decode('utf-8')
+        return buffer.decode('latin-1')
 
     def GET(self, url, args=None):
         code = 500
         body = ""
+        url_parsed = urlparse(url,scheme="http")
+
+        #set defaults in case user did not include. determine path string with query included
+        port = url_parsed.port if url_parsed.port else 80
+        path = url_parsed.path if url_parsed.path else "/"
+        query = "?" + url_parsed.query if url_parsed.query else ""
+        path_with_query = path + query
+
+        #format request
+        request = f"GET {path_with_query} HTTP/1.1\r\nHost: {url_parsed.netloc}\r\nAccept: */*\r\nConnection: close\r\n\r\n"
+        print("REQUEST: \r\n\r\n",request)
+
+        #connect, send request, and wait for response
+        self.connect(url_parsed.hostname,port)
+        self.sendall(request)
+        resp = self.recvall(self.socket)
+
+        #parse response
+        resp_lines = resp.split("\r\n")
+        resp_status_line = resp_lines[0]
+        code = resp_status_line.split(" ")[1]
+        body = re.split(r'^\r\n\r\n$',resp,1)[-1]
+
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
