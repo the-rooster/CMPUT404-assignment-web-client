@@ -49,13 +49,13 @@ class HTTPClient(object):
         return None
 
     def get_code(self, data):
-        return None
+        return data.split("\n")[0].split(" ")[1]
 
     def get_headers(self, data):
-        return None
+        return data.split("\r\n\r\n")[0]
 
     def get_body(self, data):
-        return None
+        return data.split("\r\n\r\n")[1]
 
     def sendall(self, data):
         self.socket.sendall(data.encode('utf-8'))
@@ -95,10 +95,8 @@ class HTTPClient(object):
         resp = self.recvall(self.socket)
 
         # parse response
-        resp_lines = resp.split("\r\n")
-        resp_status_line = resp_lines[0]
-        code = resp_status_line.split(" ")[1]
-        body = re.split(r'\r\n\r\n', resp, 1)[-1]
+        code = self.get_code(resp)
+        body = self.get_body(resp)
 
         return HTTPResponse(code, body)
 
@@ -114,10 +112,9 @@ class HTTPClient(object):
         path_with_query = path + query
 
         # url encode post args
-        print(args)
         content = urlencode(args) if args else ""
-        print(content)
         content_length = len(content)
+        
         # format request
         request = f"POST {path_with_query} HTTP/1.1\r\nHost: {url_parsed.netloc}\r\nAccept: */*\r\nConnection: close\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: {content_length}\r\n\r\n{content}\rn\r\n"
 
@@ -125,12 +122,10 @@ class HTTPClient(object):
         self.connect(url_parsed.hostname, port)
         self.sendall(request)
         resp = self.recvall(self.socket)
-        print(bytes(resp,encoding="latin-1"))
+
         # parse response
-        resp_lines = resp.split("\r\n")
-        resp_status_line = resp_lines[0]
-        code = resp_status_line.split(" ")[1]
-        body = re.split("\r\n\r\n", resp, 1)[-1]
+        code = self.get_code(resp)
+        body = self.get_body(resp)
         print("BODY: ",body)
 
         return HTTPResponse(code, body)
