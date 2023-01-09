@@ -114,8 +114,8 @@ class HTTPClient(object):
         # url encode post args
         content = urlencode(args) if args else ""
         content_length = len(content)
-        
-        # format request
+
+        # format request. long string
         request = f"POST {path_with_query} HTTP/1.1\r\nHost: {url_parsed.netloc}\r\nAccept: */*\r\nConnection: close\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: {content_length}\r\n\r\n{content}\rn\r\n"
 
         # connect, send request, and wait for response
